@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>News Photo Card Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#0f1222;color:#e8eaf6;min-height:100vh}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px;display:grid;grid-template-columns:340px 1fr;gap:24px}
+  @media(max-width:860px){.wrap{grid-template-columns:1fr}}
+  .panel{background:#181c33;border:1px solid #2a2f52;border-radius:14px;padding:20px;height:fit-content}
+  h1{font-size:18px;margin:0 0 16px}
+  label{display:block;font-size:13px;margin:14px 0 6px;color:#aab0d6}
+  input[type=text],textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #333a68;background:#0f1222;color:#fff;font:inherit;font-family:"Noto Serif Bengali",system-ui,sans-serif}
+  textarea{resize:vertical;min-height:90px}
+  input[type=file]{width:100%;font-size:13px;color:#aab0d6}
+  input[type=range]{width:100%;accent-color:#e0261f;cursor:pointer}
+  .range-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .range-value{min-width:48px;text-align:right;color:#fff;font-size:12px}
+  button{width:100%;margin-top:20px;padding:13px;border:0;border-radius:10px;background:#e0261f;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
+  button:hover{background:#c61e18}
+  .hint{font-size:12px;color:#7f86b3;margin-top:6px}
+  .preview{display:flex;justify-content:center;align-items:flex-start}
+  canvas{width:100%;max-width:720px;height:auto;border-radius:8px;box-shadow:0 10px 40px #000a;background:#000}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <h1>নিউজ ফটো কার্ড জেনারেটর</h1>
+
+    <label>ছবি (Photo)</label>
+    <input type="file" id="photo" accept="image/*">
+
+    <label>টাইটেল (Title)</label>
+    <textarea id="title" placeholder="এখানে শিরোনাম লিখুন">শৃঙ্খলা ভঙ্গ, কুয়াকাটায় মহিলা দলের সম্পাদককে</textarea>
+
+    <label>হাইলাইট শব্দ (হলুদ, ঐচ্ছিক)</label>
+    <input type="text" id="highlight" value="শোকজ">
+
+    <label for="titleSize">টাইটেল সাইজ</label>
+    <div class="range-row">
+      <input type="range" id="titleSize" min="90" max="300" value="260" step="2">
+      <span class="range-value" id="titleSizeValue">260</span>
+    </div>
+
+    <label for="lineHeight">লাইন হাইট</label>
+    <div class="range-row">
+      <input type="range" id="lineHeight" min="100" max="180" value="138" step="1">
+      <span class="range-value" id="lineHeightValue">138%</span>
+    </div>
+
+    <label>ওয়েবসাইট</label>
+    <input type="text" id="site" value="www.yournews.com">
+
+    <label>তারিখ (স্বয়ংক্রিয়)</label>
+    <input type="text" id="date" readonly>
+
+    <button id="dl">ডাউনলোড (3000 × 3000 PNG)</button>
+  </div>
+
+  <div class="preview"><canvas id="c" width="3000" height="3000"></canvas></div>
+</div>
+
+<script>
+(() => {
+  const W = 3000, H = 3000;
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const $ = id => document.getElementById(id);
+  const FONT = '"Noto Serif Bengali", serif';
+
+  let photoImg = null;
+  let backgroundImg = null;
+  let headerImg = null;
+
+  // ---- automatic Bengali date ----
+  function bengaliDate() {
+    try {
+      return new Intl.DateTimeFormat('bn-BD-u-nu-beng', {
+        day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Asia/Dhaka'
+      }).format(new Date());
+    } catch (e) {
+      return new Date().toLocaleDateString('bn-BD');
+    }
+  }
+  $('date').value = bengaliDate();
+
+  function loadAsset(src, cb) {
+    const img = new Image();
+    img.onload = () => cb(img);
+    img.onerror = () => cb(null);
+    img.src = src;
+  }
+
+  function loadImage(file, cb) {
+    if (!file) return cb(null);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => cb(img);
+    img.src = url;
+  }
+  $('photo').addEventListener('change', e => loadImage(e.target.files[0], i => { photoImg = i; draw(); }));
+  ['title', 'highlight', 'site'].forEach(id => $(id).addEventListener('input', draw));
+  $('titleSize').addEventListener('input', () => {
+    $('titleSizeValue').textContent = $('titleSize').value;
+    draw();
+  });
+  $('lineHeight').addEventListener('input', () => {
+    $('lineHeightValue').textContent = $('lineHeight').value + '%';
+    draw();
+  });
+  loadAsset('new 2026 card (2).png', image => { backgroundImg = image; draw(); });
+  loadAsset('01.png', image => { headerImg = image; draw(); });
+
+  // ---- helpers ----
+  function drawCover(img, x, y, w, h) {
+    const r = Math.max(w / img.width, h / img.height);
+    const sw = w / r, sh = h / r;
+    ctx.drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, x, y, w, h);
+  }
+
+  function wrap(text, maxW) {
+    const lines = [];
+    text.split('\n').forEach(par => {
+      const words = par.trim().split(/\s+/).filter(Boolean);
+      let line = '';
+      words.forEach(w => {
+        const t = line ? line + ' ' + w : w;
+        if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; }
+        else line = t;
+      });
+      if (line) lines.push(line);
+    });
+    return lines;
+  }
+
+  function background() {
+    if (backgroundImg) {
+      drawCover(backgroundImg, 0, 0, W, H);
+      return;
+    }
+
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#12136b');
+    g.addColorStop(1, '#070a45');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    // soft glows
+    const r1 = ctx.createRadialGradient(1500, 1200, 100, 1500, 1200, 1500);
+    r1.addColorStop(0, 'rgba(60,90,230,.45)'); r1.addColorStop(1, 'rgba(60,90,230,0)');
+    ctx.fillStyle = r1; ctx.fillRect(0, 0, W, H);
+
+    // dotted "world map" texture (seeded, deterministic)
+    let s = 7;
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    ctx.fillStyle = 'rgba(140,170,255,.28)';
+    for (let y = 120; y < 1700; y += 42) {
+      for (let x = 60; x < W; x += 42) {
+        if (rnd() > 0.62) { ctx.beginPath(); ctx.arc(x, y, 6, 0, 7); ctx.fill(); }
+      }
+    }
+    // globe arc
+    ctx.strokeStyle = 'rgba(120,160,255,.25)'; ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.ellipse(1500, 1750, 1200, 380, 0, Math.PI, 0); ctx.stroke();
+  }
+
+  function header() {
+    if (headerImg) {
+      // 01.png contains a tall white template; only its branded header is needed.
+      const sourceHeight = Math.min(headerImg.height, Math.round(headerImg.width * 0.16));
+      ctx.drawImage(headerImg, 0, 0, headerImg.width, sourceHeight, 0, 0, W, 430);
+    }
+  }
+
+  function title() {
+    const top = 560, bottom = 1560, maxW = 2650;
+    const hl = ($('highlight').value || '').trim();
+    const txt = ($('title').value || '').trim();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+
+    const fs = Number($('titleSize').value);
+    const lineHeight = Number($('lineHeight').value) / 100;
+    ctx.font = `700 ${fs}px ${FONT}`;
+    const lines = wrap(txt, maxW);
+    const lh = fs * lineHeight;
+    const total = (lines.length + (hl ? 1 : 0)) * lh;
+    const startY = top + ((bottom - top) - total) / 2 + fs;
+    ctx.font = `700 ${fs}px ${FONT}`;
+    ctx.fillStyle = '#fff';
+    lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lh));
+    if (hl) {
+      ctx.fillStyle = '#ffec00';
+      ctx.fillText(hl, W / 2, startY + lines.length * lh);
+    }
+  }
+
+  function photo() {
+    const y = 1640, h = 1180;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, y, W, h); ctx.clip();
+    if (photoImg) {
+      ctx.filter = 'blur(60px)';
+      drawCover(photoImg, -120, y - 120, W + 240, h + 240);
+      ctx.filter = 'none';
+      ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(0, y, W, h);
+      // main photo
+      const pw = 1510;
+      drawCover(photoImg, (W - pw) / 2, y, pw, h);
+    } else {
+      ctx.fillStyle = '#1b2a6b'; ctx.fillRect(0, y, W, h);
+      ctx.fillStyle = '#2d3f8f'; ctx.fillRect((W - 1510) / 2, y, 1510, h);
+      ctx.fillStyle = '#9db0ff'; ctx.textAlign = 'center';
+      ctx.font = `500 90px ${FONT}`;
+      ctx.fillText('ছবি যোগ করুন', W / 2, y + h / 2 + 30);
+    }
+    ctx.restore();
+    // white divider lines
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, y - 8, W, 8);
+    ctx.fillRect(0, y + h, W, 8);
+  }
+
+  function footer() {
+    const y = 2828;
+    ctx.fillStyle = '#0b0d4f'; ctx.fillRect(0, y, W, H - y);
+
+    // globe icon
+    const gx = 190, gy = y + (H - y) / 2 + 12, gr = 70;
+    ctx.strokeStyle = '#d9c24a'; ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.arc(gx, gy, gr, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(gx, gy, gr * 0.42, gr, 0, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gx - gr, gy); ctx.lineTo(gx + gr, gy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(gx, gy - gr); ctx.lineTo(gx, gy + gr); ctx.stroke();
+
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.font = `700 78px ${FONT}`;
+    ctx.textAlign = 'left';
+    ctx.fillText($('site').value || '', 310, gy + 6);
+
+    ctx.textAlign = 'right';
+    ctx.font = `700 82px ${FONT}`;
+    ctx.fillText($('date').value, W - 130, gy + 6);
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    background();
+    title();
+    photo();
+    header();
+    footer();
+  }
+
+  // ---- download ----
+  $('dl').addEventListener('click', () => {
+    $('date').value = bengaliDate();
+    draw();
+    cv.toBlob(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'news-card-' + new Date().toISOString().slice(0, 10) + '.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }, 'image/png');
+  });
+
+  // wait for the Bengali font, then draw
+  const ready = Promise.all([
+    document.fonts.load(`700 100px ${FONT}`, 'অআক'),
+    document.fonts.load(`800 100px ${FONT}`, 'অআক'),
+    document.fonts.load(`500 100px ${FONT}`, 'অআক')
+  ]).catch(() => {});
+  ready.then(() => document.fonts.ready).then(draw);
+  draw();
+})();
+</script>
+</body>
+</html>
