@@ -54,21 +54,33 @@
       <span class="range-value" id="lineHeightValue">138%</span>
     </div>
 
+    <label for="highlightSize">হাইলাইট সাইজ</label>
+    <div class="range-row">
+      <input type="range" id="highlightSize" min="60" max="140" value="100" step="1">
+      <span class="range-value" id="highlightSizeValue">100%</span>
+    </div>
+
+    <label for="photoZoom">ছবির জুম</label>
+    <div class="range-row">
+      <input type="range" id="photoZoom" min="100" max="180" value="100" step="1">
+      <span class="range-value" id="photoZoomValue">100%</span>
+    </div>
+
     <label>ওয়েবসাইট</label>
     <input type="text" id="site" value="www.yournews.com">
 
     <label>তারিখ (স্বয়ংক্রিয়)</label>
     <input type="text" id="date" readonly>
 
-    <button id="dl">ডাউনলোড (3000 × 3000 PNG)</button>
+    <button id="dl">ডাউনলোড (1200 × 1510 PNG)</button>
   </div>
 
-  <div class="preview"><canvas id="c" width="3000" height="3000"></canvas></div>
+  <div class="preview"><canvas id="c" width="1200" height="1510"></canvas></div>
 </div>
 
 <script>
 (() => {
-  const W = 3000, H = 3000;
+  const W = 1200, H = 1510;
   const cv = document.getElementById('c');
   const ctx = cv.getContext('2d');
   const $ = id => document.getElementById(id);
@@ -113,6 +125,12 @@
   $('lineHeight').addEventListener('input', () => {
     $('lineHeightValue').textContent = $('lineHeight').value + '%';
     draw();
+  });
+  ['highlightSize', 'photoZoom'].forEach(id => {
+    $(id).addEventListener('input', () => {
+      $(id + 'Value').textContent = $(id).value + '%';
+      draw();
+    });
   });
   loadAsset('new 2026 card (2).png', image => { backgroundImg = image; draw(); });
   loadAsset('01.png', image => { headerImg = image; draw(); });
@@ -171,20 +189,22 @@
 
   function header() {
     if (headerImg) {
-      // 01.png contains a tall white template; only its branded header is needed.
-      const sourceHeight = Math.min(headerImg.height, Math.round(headerImg.width * 0.16));
-      ctx.drawImage(headerImg, 0, 0, headerImg.width, sourceHeight, 0, 0, W, 430);
+      // 01.png contains the complete branded header design at its top.
+      const sourceHeight = Math.min(headerImg.height, Math.round(headerImg.width * 0.22));
+      ctx.drawImage(headerImg, 0, 0, headerImg.width, sourceHeight, 0, 0, W, 220);
     }
+
   }
 
   function title() {
-    const top = 560, bottom = 1560, maxW = 2650;
+    const top = 285, bottom = 690, maxW = 1080;
     const hl = ($('highlight').value || '').trim();
     const txt = ($('title').value || '').trim();
     ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
 
-    const fs = Number($('titleSize').value);
+    const fs = Number($('titleSize').value) * 0.4;
     const lineHeight = Number($('lineHeight').value) / 100;
+    const highlightFs = fs * Number($('highlightSize').value) / 100;
     ctx.font = `700 ${fs}px ${FONT}`;
     const lines = wrap(txt, maxW);
     const lh = fs * lineHeight;
@@ -195,27 +215,27 @@
     lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lh));
     if (hl) {
       ctx.fillStyle = '#ffec00';
+      ctx.font = `700 ${highlightFs}px ${FONT}`;
       ctx.fillText(hl, W / 2, startY + lines.length * lh);
     }
   }
 
   function photo() {
-    const y = 1640, h = 1180;
+    const y = 700, h = 700;
     ctx.save();
     ctx.beginPath(); ctx.rect(0, y, W, h); ctx.clip();
     if (photoImg) {
-      ctx.filter = 'blur(60px)';
-      drawCover(photoImg, -120, y - 120, W + 240, h + 240);
-      ctx.filter = 'none';
-      ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fillRect(0, y, W, h);
-      // main photo
-      const pw = 1510;
-      drawCover(photoImg, (W - pw) / 2, y, pw, h);
+      ctx.fillStyle = '#2d3f8f'; ctx.fillRect(0, y, W, h);
+      const zoom = Number($('photoZoom').value) / 100;
+      const scale = Math.max(W / photoImg.width, h / photoImg.height) * zoom;
+      const dw = photoImg.width * scale;
+      const dh = photoImg.height * scale;
+      ctx.drawImage(photoImg, (W - dw) / 2, y + (h - dh) / 2, dw, dh);
     } else {
       ctx.fillStyle = '#1b2a6b'; ctx.fillRect(0, y, W, h);
-      ctx.fillStyle = '#2d3f8f'; ctx.fillRect((W - 1510) / 2, y, 1510, h);
+      ctx.fillStyle = '#2d3f8f'; ctx.fillRect(0, y, W, h);
       ctx.fillStyle = '#9db0ff'; ctx.textAlign = 'center';
-      ctx.font = `500 90px ${FONT}`;
+      ctx.font = `500 36px ${FONT}`;
       ctx.fillText('ছবি যোগ করুন', W / 2, y + h / 2 + 30);
     }
     ctx.restore();
@@ -226,12 +246,12 @@
   }
 
   function footer() {
-    const y = 2828;
+    const y = 1400;
     ctx.fillStyle = '#0b0d4f'; ctx.fillRect(0, y, W, H - y);
 
     // globe icon
-    const gx = 190, gy = y + (H - y) / 2 + 12, gr = 70;
-    ctx.strokeStyle = '#d9c24a'; ctx.lineWidth = 8;
+    const gx = 68, gy = y + (H - y) / 2 - 8, gr = 22;
+    ctx.strokeStyle = '#d9c24a'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(gx, gy, gr, 0, 7); ctx.stroke();
     ctx.beginPath(); ctx.ellipse(gx, gy, gr * 0.42, gr, 0, 0, 7); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(gx - gr, gy); ctx.lineTo(gx + gr, gy); ctx.stroke();
@@ -239,13 +259,13 @@
 
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff';
-    ctx.font = `700 78px ${FONT}`;
+    ctx.font = `700 26px ${FONT}`;
     ctx.textAlign = 'left';
-    ctx.fillText($('site').value || '', 310, gy + 6);
+    ctx.fillText($('site').value || '', 105, gy + 2);
 
     ctx.textAlign = 'right';
-    ctx.font = `700 82px ${FONT}`;
-    ctx.fillText($('date').value, W - 130, gy + 6);
+    ctx.font = `700 27px ${FONT}`;
+    ctx.fillText($('date').value, W - 42, gy + 2);
     ctx.textBaseline = 'alphabetic';
   }
 
