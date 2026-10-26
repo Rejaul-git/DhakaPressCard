@@ -37,7 +37,7 @@
     <input type="file" id="photo" accept="image/*">
 
     <label>টাইটেল (Title)</label>
-    <textarea id="title" placeholder="এখানে শিরোনাম লিখুন">শৃঙ্খলা ভঙ্গ, কুয়াকাটায় মহিলা দলের সম্পাদককে</textarea>
+    <textarea id="title" placeholder="এখানে শিরোনাম লিখুন">আমাকে ব্যবহার করুন</textarea>
 
     <label>হাইলাইট শব্দ (হলুদ, ঐচ্ছিক)</label>
     <input type="text" id="highlight" value="শোকজ">
@@ -67,7 +67,7 @@
     </div>
 
     <label>ওয়েবসাইট</label>
-    <input type="text" id="site" value="www.yournews.com">
+    <input type="text" id="site" value="www.dhakapress.com">
 
     <label>তারিখ (স্বয়ংক্রিয়)</label>
     <input type="text" id="date" readonly>
@@ -191,7 +191,8 @@
     if (headerImg) {
       // 01.png contains the complete branded header design at its top.
       const sourceHeight = Math.min(headerImg.height, Math.round(headerImg.width * 0.22));
-      ctx.drawImage(headerImg, 0, 0, headerImg.width, sourceHeight, 0, 0, W, 220);
+      const headerHeight = W * sourceHeight / headerImg.width;
+      ctx.drawImage(headerImg, 0, 0, headerImg.width, sourceHeight, 0, 0, W, headerHeight);
     }
 
   }
@@ -209,7 +210,7 @@
     const lines = wrap(txt, maxW);
     const lh = fs * lineHeight;
     const total = (lines.length + (hl ? 1 : 0)) * lh;
-    const startY = top + ((bottom - top) - total) / 2 + fs;
+    const startY = top + ((bottom - top) - total) / 2 + fs - 60;
     ctx.font = `700 ${fs}px ${FONT}`;
     ctx.fillStyle = '#fff';
     lines.forEach((l, i) => ctx.fillText(l, W / 2, startY + i * lh));
@@ -264,7 +265,7 @@
     ctx.fillText($('site').value || '', 105, gy + 2);
 
     ctx.textAlign = 'right';
-    ctx.font = `700 27px ${FONT}`;
+    ctx.font = `700 34px ${FONT}`;
     ctx.fillText($('date').value, W - 42, gy + 2);
     ctx.textBaseline = 'alphabetic';
   }
