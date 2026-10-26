@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>News Photo Card Generator</title>
+<meta name="theme-color" content="#0f1222">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@500;700;800&display=swap" rel="stylesheet">
@@ -23,6 +26,8 @@
   .range-value{min-width:48px;text-align:right;color:#fff;font-size:12px}
   button{width:100%;margin-top:20px;padding:13px;border:0;border-radius:10px;background:#e0261f;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
   button:hover{background:#c61e18}
+  #install{display:none;background:#2d3f8f}
+  #install:hover{background:#243274}
   .hint{font-size:12px;color:#7f86b3;margin-top:6px}
   .hidden-control{display:none}
   .preview{display:flex;justify-content:center;align-items:flex-start}
@@ -76,6 +81,7 @@
     </div>
 
     <button id="dl">ডাউনলোড (1200 × 1510 PNG)</button>
+    <button id="install" type="button">অ্যাপ হিসেবে Install করুন</button>
   </div>
 
   <div class="preview"><canvas id="c" width="1200" height="1510"></canvas></div>
@@ -88,6 +94,7 @@
   const ctx = cv.getContext('2d');
   const $ = id => document.getElementById(id);
   const FONT = '"Noto Serif Bengali", serif';
+  let deferredInstallPrompt = null;
 
   let photoImg = null;
   let backgroundImg = null;
@@ -104,6 +111,33 @@
     }
   }
   $('date').value = bengaliDate();
+
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    $('install').style.display = 'block';
+  });
+
+  $('install').addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    $('install').style.display = 'none';
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    $('install').style.display = 'none';
+  });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(error => {
+        console.error('Service worker registration failed:', error);
+      });
+    });
+  }
 
   function loadAsset(src, cb) {
     const img = new Image();
