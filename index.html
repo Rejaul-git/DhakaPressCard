@@ -24,6 +24,7 @@
   button{width:100%;margin-top:20px;padding:13px;border:0;border-radius:10px;background:#e0261f;color:#fff;font-size:16px;font-weight:700;cursor:pointer}
   button:hover{background:#c61e18}
   .hint{font-size:12px;color:#7f86b3;margin-top:6px}
+  .hidden-control{display:none}
   .preview{display:flex;justify-content:center;align-items:flex-start}
   canvas{width:100%;max-width:720px;height:auto;border-radius:8px;box-shadow:0 10px 40px #000a;background:#000}
 </style>
@@ -66,11 +67,13 @@
       <span class="range-value" id="photoZoomValue">100%</span>
     </div>
 
-    <label>ওয়েবসাইট</label>
-    <input type="text" id="site" value="www.dhakapress.com">
+    <div class="hidden-control">
+      <label>ওয়েবসাইট</label>
+      <input type="text" id="site" value="www.dhakapress.com">
 
-    <label>তারিখ (স্বয়ংক্রিয়)</label>
-    <input type="text" id="date" readonly>
+      <label>তারিখ (স্বয়ংক্রিয়)</label>
+      <input type="text" id="date" readonly>
+    </div>
 
     <button id="dl">ডাউনলোড (1200 × 1510 PNG)</button>
   </div>
@@ -240,18 +243,19 @@
       ctx.fillText('ছবি যোগ করুন', W / 2, y + h / 2 + 30);
     }
     ctx.restore();
-    // white divider lines
+    // white divider line at the bottom edge of the image area
     ctx.fillStyle = '#fff';
-    ctx.fillRect(0, y - 8, W, 8);
     ctx.fillRect(0, y + h, W, 8);
   }
 
   function footer() {
     const y = 1400;
     ctx.fillStyle = '#0b0d4f'; ctx.fillRect(0, y, W, H - y);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, y, W, 8);
 
     // globe icon
-    const gx = 68, gy = y + (H - y) / 2 - 8, gr = 22;
+    const gx = 68, gy = y + (H - y) / 2 + 3, gr = 22;
     ctx.strokeStyle = '#d9c24a'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(gx, gy, gr, 0, 7); ctx.stroke();
     ctx.beginPath(); ctx.ellipse(gx, gy, gr * 0.42, gr, 0, 0, 7); ctx.stroke();
