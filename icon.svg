@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0f1222"/>
+  <path d="M92 138h328v236H92z" fill="#fff"/>
+  <path d="M92 138h328v62H92z" fill="#e0261f"/>
+  <circle cx="142" cy="169" r="18" fill="#fff"/>
+  <path d="M126 238h260v24H126zm0 50h190v24H126z" fill="#0f1222"/>
+  <path d="M126 342h112v18H126z" fill="#e0261f"/>
+  <text x="256" y="185" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" font-weight="700" fill="#fff">NEWS</text>
+</svg>
